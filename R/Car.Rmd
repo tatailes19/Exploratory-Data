@@ -1,0 +1,154 @@
+---
+title: "Test info"
+author: "Elheit chakib"
+date: '2022-06-03'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r }
+library(readxl)
+library(tidyverse)
+mat=read_excel("matricules des étudiants.xlsx")
+names(mat)
+set.seed(mat$Matricule[7])
+data=read.csv("Databases/Data.csv")
+data1=data[sample(dim(data)[1],50000),]
+```
+info generales
+```{r}
+glimpse(data1)
+dim(data1)
+```
+statistique descriptive
+```{r}
+summary(data1)
+#nombre de fabriquants 
+length(unique(data1$manufacturer))
+```
+Pays fabriquant
+```{r}
+data1%>%
+  group_by(sourcing_country)%>%
+  count()%>%
+  ggplot(aes(sourcing_country,n))+geom_col(width = 0.3)
+```
+Top 10 Marques
+```{r}
+
+data1%>%
+  group_by(manufacturer)%>%
+  count%>%
+  arrange(desc(n))%>%
+  head(10)%>%
+  ggplot(aes(y=n,manufacturer,fill=manufacturer))+geom_col(aes(y=n,manufacturer))+
+  theme_get()+coord_flip()
+```
+Top 10 marque en distinguant entre le type d'energie
+```{r}
+#bilaterale
+data1%>%
+  group_by(manufacturer,fuel_type)%>%
+  count%>%
+  arrange(desc(n))%>%
+  head(10)%>%
+  ggplot(aes(manufacturer,n,fill=fuel_type))+geom_col(aes(color=fuel_type))
+```
+Fuel type
+```{r}
+#unilaterale
+data1%>%
+  group_by(fuel_type)%>%
+  count()%>%
+  ggplot(aes("",fuel_type,fill=fuel_type))+
+  geom_col()+coord_polar("y",start = 0)
+```
+Fuel type si la voiture est vendus ou pas
+```{r}
+#bilaterale
+data1%>%
+  group_by(fuel_type,sold)%>%
+  count%>%
+  arrange(desc(n))%>%
+  ggplot(aes(fuel_type,n,fill=sold))+geom_col()
+```
+kw
+```{r}
+#unilaterale
+hist(data1$kw)
+#bilaterale (kilo watt par type d'energie)
+data1%>%
+  ggplot(aes(kw,color=fuel_type))+
+  geom_histogram(bins = 30,fill="white")
+```
+horsepower
+```{r}
+ggplot(data1,aes(data1$horsepower,data1$kw))+geom_point()
+```
+buy price
+```{r}
+summary(data1$buy_price)
+
+data1%>%
+  ggplot(aes(buy_price))+geom_boxplot()
+
+#prix de vente par type de vente
+data1%>%
+  ggplot(aes(buy_price,color=sales_channel))+geom_histogram(bins = 30,fill="blue",alpha=0.5)
+```
+sold
+```{r}
+pourcentage=(sum(data1$sold)/50000)*100
+print("97.354% des voitures sont vendus")
+```
+sales_channel
+```{r}
+data1%>%
+  group_by(sales_channel)%>%
+  count()%>%
+  ggplot(aes(sales_channel,n,fill=sales_channel))+geom_col(width=0.3)
+```
+Choix de variables :
+En effectuant des nuages de point on trouve des relations entre ces 3 variables et le prix de vente
+```{r}
+ggplot(data1,aes(kw,buy_price))+geom_point()
+ggplot(data1,aes(horsepower,buy_price))+geom_point()
+ggplot(data1,aes(built_year,buy_price))+geom_point()
+```
+Estimation du prix de vente model lineaire multiple
+```{r}
+summary(lm(buy_price~kw+built_year,data=data1))
+data1%>%
+  lm(buy_price~built_year+kw+horsepower,data=.)%>%
+  summary()
+```
+Model lineaire simple
+```{r}
+#variable explicative = kw
+summary(lm(buy_price~kw,data=data1))
+```
+Création des nouvelles variables
+```{r}
+data1=data1%>%
+  mutate(collection=built_year<1995,
+         collection=if_else(collection==TRUE,"vintage","moderne"))
+data1%>%
+  select(built_year,collection)%>%
+  head(10)
+```
+ML avec la variable collection
+```{r}
+data1%>%
+  lm(buy_price~collection,data = .)%>%
+  summary()
+```
+
+
+

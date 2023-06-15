@@ -1,0 +1,150 @@
+---
+title: "test"
+output: html_document
+date: "2022-12-16"
+---
+```{r}
+library(tidyverse)
+```
+```{r}
+data=read.csv("Data.csv")
+```
+```{r}
+paste("nombre de lignes :",nrow(data))
+paste("nombre de colonnes :",ncol(data))
+```
+```{r}
+int=0
+dbl=0
+chr=0
+for (i in colnames(data)){
+  if (class(data[[i]])=="integer"){
+    int=int+1
+  }else if (class(data[[i]])=="numeric"){
+    dbl=dbl+1
+  }else if (class(data[[i]])=="character"){
+    chr=chr+1
+  }
+}
+
+print(paste("class integer=",int,",class numeric=",dbl,",class character=",chr))
+```
+```{r}
+data%>%summarise_all(funs(sum(is.na(.))))
+```
+```{r}
+data%>%
+  group_by(sourcing_country)%>%
+  count()
+```
+```{r}
+data%>%
+  group_by(fuel_type)%>%
+  count()%>%
+  mutate(percent=n/nrow(data)*100)
+```
+```{r}
+data%>%
+  group_by(sales_channel)%>%
+  count()%>%
+  mutate(percent=n/nrow(data)*100)
+```
+```{r}
+data%>%select(manufacturer)%>%unique()%>%nrow()
+```
+```{r}
+data%>%
+  count(manufacturer)%>%slice_max(n,n=5)
+```
+```{r}
+data%>%summarise(iqr=IQR(built_year))
+```
+```{r}
+data%>%select(horsepower)%>%summary()
+```
+```{r}
+data%>%select(kw)%>%summary()
+```
+```{r}
+data%>%
+  select(mileage)%>%
+  summarise(moyenne=mean(mileage),
+            variance=var(mileage),
+            ecart_type=sd(mileage))
+```
+```{r}
+data%>%select(buy_price)%>%summary()
+```
+```{r}
+#
+```
+```{r}
+best<-data%>%group_by(manufacturer)%>%
+  count()%>%arrange(-n)%>%head(5)%>%pull(manufacturer)
+data%>%
+  filter(sourcing_country=="USA",
+         manufacturer %in% best)%>%
+  summarise(moyenne=mean(buy_price),
+            variance=var(buy_price),
+            ecart_type=sd(buy_price))
+```
+```{r}
+data%>%
+  filter(sourcing_country=="China",mileage>158000,sales_channel=="auction_type2")%>%
+  summarise(lvl=c(0.25,0.5,0.75),quartile=quantile(buy_price,c(0.25,0.5,0.75)))
+```
+```{r}
+data%>%filter(fuel_type=="Benzin",horsepower>66)%>%summarise(variance=var(buy_price))
+```
+```{r}
+erreur<-function(x){
+  m=median(x,na.rm=T)
+  s=(sum(abs(x-m),na.rm=T))/nrow(data)
+  return(s)
+}
+data%>%summarise(erreur_moyenne_absolue=erreur(buy_price))
+data%>%
+  filter(manufacturer=="USA",horsepower<127)%>%
+  summarise(erreur_moyenne_absolue=erreur(buy_price))
+```
+```{r}
+data%>%filter(buy_price<20000)%>%summarise(ecart_interquartile=IQR(horsepower))
+```
+```{r}
+data<-data%>%mutate(new_old=if_else(built_year>1993,"moderne","classique"))
+```
+```{r}
+data%>%select(built_year,new_old)%>%slice(21:30)
+```
+```{r}
+data%>%group_by(new_old)%>%summarise(moyenne=mean(buy_price),frequence=table(new_old))
+```
+```{r}
+data<-data%>%mutate(sold_date=as.Date(sold_date),bought_date=as.Date(bought_date),
+                    days=as.numeric(sold_date-bought_date))
+```
+```{r}
+data%>%mutate(days=as.numeric(days))%>%summarise(moyenne=mean(days,na.rm=TRUE),ecart_type=sd(days,na.rm=TRUE))
+```
+```{r}
+data%>%group_by(sales_channel)%>%summarise(sommaire=as.data.frame(rbind(summary(days))))
+data%>%filter(days<0)
+
+#le type 1 vend plus rapidement moyenne1<moyenne2 , median1<median2, 3rd quartile1< 2
+```
+```{r}
+data%>%group_by(sourcing_country)%>%summarise(sommaire=as.data.frame(rbind(summary(days))))
+#usa plus rapide 
+```
+```{r}
+data%>%select(buy_price,days)%>%na.omit()%>%cor()
+```
+```{r}
+data%>%select(buy_price,horsepower)%>%cor()
+```
+```{r}
+data%>%select_if(is.numeric)%>%cor()
+```
+
+
+
